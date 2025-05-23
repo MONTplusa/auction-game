@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auction Game Visualizer</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="wasm_exec.js"></script>
+</head>
+
+<body>
+    <!-- ▶ 初期設定パネル -->
+    <div id="config">
+        <h2>プレイヤー設定</h2>
+        <label>
+            人数:
+            <select id="select-players">
+                <!-- 2～8 を列挙 -->
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+            </select>
+        </label>
+        <div id="player-types"><!-- JS で select が追加される --></div>
+        <button id="btn-start">ゲーム開始</button>
+    </div>
+
+    <div id="result-overlay" style="
+     position: absolute;
+     top: 0; left: 0; right: 0; bottom: 0;
+     background: rgba(0,0,0,0.8);
+     color: #fff;
+     display: none;
+     align-items: center;
+     justify-content: center;
+     z-index: 10;
+">
+        <div id="final-results" style="
+       background: #1f2f1c;
+       padding: 24px;
+       border-radius: 8px;
+       max-height: 80vh;
+       overflow-y: auto;
+  ">
+            <h2 style="text-align:center; margin-bottom:16px;">最終結果</h2>
+            <table id="final-table" style="width:100%; border-collapse: collapse;">
+                <thead>
+                    <tr>
+                        <th>順位</th>
+                        <th>ID</th>
+                        <th>名前</th>
+                        <th>得点</th>
+                        <th>コイン(R,G,B)</th>
+                        <th>収入(R,G,B)</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            <h3 style="margin-top:24px;">順位推移</h3>
+            <canvas id="rank-chart" width="600" height="300"
+                style="max-width:100%; height:auto; background:#fff; border-radius:4px;"></canvas>
+            <div style="text-align:center; margin-top:16px;">
+                <button id="btn-close-results">閉じる</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ▶ 可視化パネル（初期は非表示） -->
+    <div id="visualizer" style="display:none;">
+        <div id="layout">
+            <!-- 左カラム：現在の場 -->
+            <section id="field-panel" class="panel">
+                <h2>今の宝石</h2>
+                <img id="jewel-img" class="jewel-img" src="" alt="宝石" />
+                <div>得点: <span id="jewel-point">—</span></div>
+                <div>収入: <span id="jewel-income">—</span></div>
+                <div>フェーズ: <span id="phase">—</span></div>
+                <div>ラウンド: <span id="round">—</span></div>
+                <div>最高入札者: <span id="highest-player">—</span></div>
+                <div>最高入札額: <span id="highest-bid">—</span></div>
+            </section>
+
+            <!-- 中央カラム：プレイヤー状況 -->
+            <section id="player-panel" class="panel">
+                <h2>プレイヤー状況</h2>
+                <table id="player-table">
+                    <thead>
+                        <tr>
+                        <tr>
+                            <th>#</th>
+                            <th>名前</th>
+                            <th>順位</th>
+                            <th>得点</th>
+                            <th>所持</th>
+                            <th>収入</th>
+                            <th>暫定</th>
+                            <th>ステータス</th>
+                        </tr>
+                        </tr>
+                    </thead>
+                    <tbody id="player-body"></tbody>
+                </table>
+            </section>
+
+            <!-- 右カラム：操作パレット -->
+            <section id="control-panel" class="panel">
+                <h2>操作</h2>
+                <div id="controls">
+                    <button id="btn-next">次へ (N)</button>
+                    <button id="btn-skip-round">ラウンド終了までスキップ (R)</button>
+                    <button id="btn-skip-phase">フェーズ終了までスキップ (P)</button>
+                </div>
+                <div id="human-controls">
+                    <h3>あなたの入札</h3>
+                    <input id="input-r" type="number" step="1" placeholder="R" />
+                    <input id="input-g" type="number" step="1" placeholder="G" />
+                    <input id="input-b" type="number" step="1" placeholder="B" />
+                    <button id="btn-human-bid">入札</button>
+                    <button id="btn-human-pass">パス</button>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="app.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,170 @@
+/* 全体を横３カラムに */
+html, body {
+  height: 100%;
+  margin: 0;
+}
+#layout {
+  display: flex;
+  height: 100vh;         /* ビューポートいっぱい */
+  overflow: hidden;       /* ページ全体の縦スクロールを防ぐ */
+}
+
+/* 各パネル共通 */
+.panel {
+  padding: 12px;
+  overflow-y: auto;       /* 内容がはみ出るときは内部スクロール */
+}
+
+/* 左カラム：やや狭く（18%／最大220px） */
+#field-panel {
+  flex: 0 0 18%;
+  max-width: 220px;
+  background: #164d2e;
+  color: #f0f0e0;
+}
+  
+/* 中央カラム：可変幅 */
+#player-panel {
+  flex: 1 1 auto;         /* 残り幅すべて使う */
+  min-width: 0;           /* flex 子要素が縮むことを許容 */
+  overflow-x: auto;       /* それでも足りなければ横スクロール */
+  
+  background: #1f2f1c;
+  color: #e0e0d0;
+}
+
+/* 右カラム：少し詰める（22%）*/
+#control-panel {
+  flex: 0 0 22%;
+  max-width: 260px;
+  background: #2e3020;
+  color: #f8f8e8;
+}
+
+/* Jewel 画像のサイズ調整 */
+.jewel-img {
+  display: block;
+  margin: 0 auto 12px;
+  max-width: 100%;
+  width: clamp(120px, 20vw, 240px);
+  height: auto;
+  object-fit: contain;
+}
+
+#player-body {
+  display: table-row-group; /* tbody が意図せず隠されていないか */
+}
+/* テーブルの見た目調整 */
+#player-table {
+  width: 100%;
+  display: table;  /* テーブルが隠されていないか */
+  border-collapse: collapse;
+  table-layout: auto;     /* コンテンツに応じて列幅を自動調整 */
+}
+#player-table th, #player-table td {
+  padding: 4px;
+  border: 1px solid #444;
+  font-size: 0.9rem;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 10ch;        /* 1セルの最大文字幅を少し広げる */
+}
+
+/* 手番／パスのハイライト */
+.current-turn {
+  background-color: rgba(255, 223, 0, 0.2) !important;
+}
+.passed {
+  opacity: 0.4 !important;
+  text-decoration: line-through;
+}
+
+/* 初期設定パネルを中央に */
+#config {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background: #0a2e13;
+  color: #f0f0e0;
+}
+#config h2 {
+  margin-bottom: 1rem;
+}
+#config label,
+#config #player-types {
+  margin: 0.5rem 0;
+}
+#btn-start {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+}
+
+#result-overlay {
+  display: flex;            /* Flex で中央揃え */
+}
+#final-table th,
+#final-table td {
+  border: 1px solid #444;
+  padding: 8px;
+  text-align: center;
+}
+#btn-close-results {
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+}
+
+#human-controls input[type="number"] {
+  width: 8ch;            /* 最大8桁分の幅を確保 */
+  min-width: 7ch;        /* それ以上は縮まない */
+  font-size: 1.1rem;     /* 主要アクションなのでやや大きめ */
+  padding: 4px 8px;      /* 矢印の分を確保しつつタップしやすく */
+  text-align: right;
+  box-sizing: border-box;
+  appearance: textfield; /* Firefox でもスピンを非表示に */
+}
+
+/* Chrome/Safari/Edge のスピンボタンを小さく */
+#human-controls input[type="number"]::-webkit-inner-spin-button,
+#human-controls input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: inner-spin-button;
+  width: auto;
+  transform: scale(1);   /* 矢印をデフォルトサイズに */
+  margin-right: 4px;     /* 右側に余裕を確保 */
+}
+
+/* Firefox のスピンボタンを小さく */
+#human-controls input[type="number"] {
+  -moz-appearance: textfield; /* デフォルトスピンを消しておく */
+}
+
+#human-controls input[type="number"]::-moz-number-spin-box {
+  width: 1.4em;
+  height: 1.4em;
+}
+
+/*── 現在手番の行／マーカー（重複を統合）──────────────*/
+#player-body tr.current-turn:not(.passed) {
+  background-color: #fff3cd;
+  border-left: 4px solid #ffeeba;
+  font-weight: 600;
+}
+.turn-marker {
+  font-size: 1.2em;
+  color: #d48806;
+  display: inline-block;
+  margin-left: 2px;
+  transform: translateY(2px);
+}
+
+/* ── 最高入札マーカー ───────────────────────── */
+.bid-marker {
+  font-size: 1.2em;
+  color: #ffb300;      /* ゴールド系 */
+  display: inline-block;
+  transform: translateY(2px);
+}
