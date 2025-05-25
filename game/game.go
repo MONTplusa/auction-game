@@ -9,6 +9,19 @@ type GameState struct {
 	Moneys  [][3]int // 各プレイヤーの現在所持コイン (長さ N, 各要素は [赤,緑,青])
 }
 
+func (g *GameState) Copy() *GameState {
+	newg := GameState{}
+	newg.Phase = g.Phase
+	newg.Round = g.Round
+	newg.Scores = make([]int, 0, len(g.Scores))
+	newg.Scores = append(newg.Scores, g.Scores...)
+	newg.Incomes = make([][3]int, 0, len(g.Incomes))
+	newg.Incomes = append(newg.Incomes, g.Incomes...)
+	newg.Moneys = make([][3]int, 0, len(g.Moneys))
+	newg.Moneys = append(newg.Moneys, g.Moneys...)
+	return &newg
+}
+
 // AuctionState holds the state for a single auction round.
 type AuctionState struct {
 	MaxPlayer         int    // 暫定最高入札者のプレイヤー番号（未入札なら -1）
