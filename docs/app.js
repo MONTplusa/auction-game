@@ -1,3 +1,12 @@
+let scoreChart = null;
+
+function makeBadges(arr) {
+  const classes = ["coin-red", "coin-green", "coin-blue"];
+  return arr
+    .map((v, i) => `<span class="coin ${classes[i]}">${v}</span>`)
+    .join("");
+}
+
 // Ensure Go's WebAssembly support is loaded; include wasm_exec.js in index.html before this.
 const go = new Go();
 let isWasmLoaded = false;
@@ -43,7 +52,7 @@ function setupPlayerTypes() {
 
   for (let i = 0; i < n; i++) {
     const label = document.createElement("label");
-    label.textContent = `Player ${i + 1}: `;
+    label.textContent = `Player ${i}: `;
     const sel = document.createElement("select");
     sel.id = `type-${i}`;
 
@@ -94,6 +103,7 @@ function showFinalResults(state) {
     tbody.appendChild(tr);
   });
   drawScoreChart();
+  drawIncomeChart();
   overlay.style.display = "flex";
 }
 
@@ -103,17 +113,52 @@ document.getElementById("btn-close-results").addEventListener("click", () => {
 });
 
 function updateUI(state) {
+  const btnShow = document.getElementById("btn-show-results");
+
   // ゲーム終了時
   if (state.GameOver) {
-    // 操作パネルを隠す
-    document.getElementById("controls").style.display = "none";
+    // ゲーム終了後は「結果を見る」を表示
+    btnShow.style.display = "inline-block";
+    // 「入札」部だけ隠す
     document.getElementById("human-controls").style.display = "none";
+
+    // Next／Skip ボタンを無効化（見た目はそのまま）
+    document.getElementById("btn-next").disabled = true;
+    document.getElementById("btn-skip-round").disabled = true;
+    document.getElementById("btn-skip-phase").disabled = true;
+
     // 結果オーバーレイを表示
     showFinalResults(state);
     return;
   }
+
+  btnShow.style.display = "none";
+
+  // 通常時はボタン有効化（再スタート後にも有効に）
+  document.getElementById("btn-next").disabled = false;
+  document.getElementById("btn-skip-round").disabled = false;
+  document.getElementById("btn-skip-phase").disabled = false;
+
   document.getElementById("phase").textContent = state.Phase;
   document.getElementById("round").textContent = state.Round;
+
+  // 全フェーズ数・全ラウンド数を計算
+  const totalPhases = 10;
+  const totalRounds = state.Players.length * 3;
+
+  // 小さな表示とバナー用に fraction 形式でセット
+  document.getElementById(
+    "phase"
+  ).textContent = `${state.Phase}/${totalPhases}`;
+  document.getElementById(
+    "round"
+  ).textContent = `${state.Round}/${totalRounds}`;
+  document.getElementById(
+    "banner-phase"
+  ).textContent = `${state.Phase}/${totalPhases}`;
+  document.getElementById(
+    "banner-round"
+  ).textContent = `${state.Round}/${totalRounds}`;
 
   // 宝石画像の切り替え
   const jewelImg = document.getElementById("jewel-img");
@@ -131,52 +176,102 @@ function updateUI(state) {
   // Auction info
   document.getElementById("highest-player").textContent =
     state.Auction.MaxPlayer;
-  document.getElementById("highest-bid").textContent =
-    state.Auction.MaxValue.join(",");
+  document.getElementById("highest-bid").innerHTML = makeBadges(
+    state.Auction.MaxValue
+  );
 
-  // Players table
-  // Players table
+  // Players table 用に、各コインの最大値を計算
+  const maxMoney = state.Players.reduce(
+    (acc, p) => p.Moneys.map((v, i) => Math.max(acc[i], v)),
+    [0, 0, 0]
+  );
+  const maxIncomeArr = state.Players.reduce(
+    (acc, p) => p.Income.map((v, i) => Math.max(acc[i], v)),
+    [0, 0, 0]
+  );
+
+  // ヘルパー関数をローカルに定義
+  const makeBars = (arr, maxArr) => {
+    const colors = ["red", "green", "blue"];
+    return (
+      `<div class="coin-bar-container">` +
+      arr
+        .map((v, i) => {
+          const pct = maxArr[i] ? (v / maxArr[i]) * 100 : 0;
+          return `<div class="coin-bar ${colors[i]}" style="width:${pct}%">
+                  <span>${v}</span>
+                </div>`;
+        })
+        .join("") +
+      `</div>`
+    );
+  };
+
+  // Players table の再構築
   const tbody = document.getElementById("player-body");
   tbody.innerHTML = "";
-  // 手番インデックスを数値に統一
-  const turnIndex = Number(state.Turn);
   state.Players.forEach((p) => {
-    const pIndex = Number(p.Index);
-    const isCurrent = pIndex === turnIndex;
     const tr = document.createElement("tr");
-    tr.id = `player-row-${p.Index}`; // ←★ 行に ID を付ける
+    // ① 行に ID を振る
+    tr.id = `player-row-${p.Index}`;
 
-    // パスしたら淡色化
-    if (p.HasPassed) {
-      tr.classList.add("passed");
+    // ② 現在手番ならハイライト
+    if (Number(p.Index) === Number(state.Turn)) {
+      tr.classList.add("current-turn");
     }
-    /* ステータス欄の内容を決定 */
-    const statusHtml = p.HasPassed ? "✕" : "";
 
-    /* 最高入札者マーカー列の内容を決定 */
-    const isHighest = p.Index === state.Auction.MaxPlayer;
-    const bidHtml = isHighest ? '<span class="bid-marker">💰</span>' : "—";
+    if (p.HasPassed) tr.classList.add("passed");
+    if (Number(p.Index) === Number(state.Turn))
+      tr.classList.add("current-turn");
 
-    const cols = [
-      p.Index,
-      p.Name,
-      p.Rank,
-      p.Score,
-      p.Moneys.join(","),
-      p.Income.join(","),
-      bidHtml,
-      statusHtml,
-    ];
-    cols.forEach((val, idx) => {
+    // 列データをバー化
+    // 基本情報（#, 名前, 順位, 得点）
+    [p.Index, p.Name, p.Rank, p.Score].forEach((val) => {
       const td = document.createElement("td");
-      // bid／status の末尾2列は innerHTML 挿入
-      if (idx >= cols.length - 2) {
-        td.innerHTML = val;
-      } else {
-        td.textContent = val;
-      }
+      td.textContent = val;
       tr.appendChild(td);
     });
+
+    // 所持コイン R,G,B を３セルに分割してバー化
+    p.Moneys.forEach((v, i) => {
+      const td = document.createElement("td");
+      const pct = maxMoney[i] ? (v / maxMoney[i]) * 100 : 0;
+      td.innerHTML = `
+           <div class="coin-bar-wrapper">
+             <span class="coin-bar-label">${v}</span>
+             <div class="coin-bar ${
+               ["red", "green", "blue"][i]
+             }" style="width:${pct}%"></div>
+           </div>`;
+      tr.appendChild(td);
+    });
+
+    // 収入コイン R,G,B を３セルに分割してバー化
+    p.Income.forEach((v, i) => {
+      const td = document.createElement("td");
+      const pct = maxIncomeArr[i] ? (v / maxIncomeArr[i]) * 100 : 0;
+      td.innerHTML = `
+           <div class="coin-bar-wrapper">
+             <span class="coin-bar-label">${v}</span>
+             <div class="coin-bar ${
+               ["red", "green", "blue"][i]
+             }" style="width:${pct}%"></div>
+           </div>`;
+      tr.appendChild(td);
+    });
+
+    // 最高入札マーカー
+    const bidTd = document.createElement("td");
+    bidTd.innerHTML =
+      p.Index === state.Auction.MaxPlayer
+        ? '<span class="bid-marker">💰</span>'
+        : "—";
+    tr.appendChild(bidTd);
+
+    // パスステータス
+    const statusTd = document.createElement("td");
+    statusTd.textContent = p.HasPassed ? "✕" : "";
+    tr.appendChild(statusTd);
     tbody.appendChild(tr);
   });
 
@@ -185,6 +280,8 @@ function updateUI(state) {
     .forEach((row) => row.classList.remove("current-turn"));
   const hi = document.getElementById(`player-row-${state.Turn}`);
   if (hi) hi.classList.add("current-turn");
+
+  updateScoreLine(state);
 
   // Human controls
   const humanControls = document.getElementById("human-controls");
@@ -214,6 +311,8 @@ function bindControls() {
   const btnNext = document.getElementById("btn-next");
   const btnSkipR = document.getElementById("btn-skip-round");
   const btnSkipP = document.getElementById("btn-skip-phase");
+  const btnShow = document.getElementById("btn-show-results");
+  const btnNew = document.getElementById("btn-new-game");
 
   // Next ボタン
   btnNext.addEventListener("click", performStep);
@@ -234,6 +333,18 @@ function bindControls() {
     while (state.Phase == targetPhase && state.Auction) {
       state = await performStep();
     }
+  });
+
+  btnShow.addEventListener("click", () => {
+    const state = window.getCurrentState();
+    showFinalResults(state);
+  });
+
+  // 新しいゲーム
+  btnNew.addEventListener("click", () => {
+    // ビジュアライザを隠して設定画面へ
+    document.getElementById("visualizer").style.display = "none";
+    document.getElementById("config").style.display = "flex";
   });
 
   // ここから追加：キー操作
@@ -328,17 +439,21 @@ async function drawScoreChart() {
     fill: false,
   }));
 
+  if (scoreChart) {
+    scoreChart.destroy();
+  }
+
   // ■ Chart.js で描画
   const ctx = document.getElementById("rank-chart").getContext("2d");
-  new Chart(ctx, {
+  scoreChart = new Chart(ctx, {
     type: "line",
     data: { labels, datasets },
     options: {
       scales: {
         y: {
-          reverse: false, // 得点は上向きに増えるので反転不要
+          reverse: false,
           ticks: { beginAtZero: true },
-          title: { display: true, text: "得点" },
+          title: { display: true, text: "平均からの差分" },
         },
         x: {
           title: { display: true, text: "フェーズ" },
@@ -348,6 +463,155 @@ async function drawScoreChart() {
         legend: { position: "bottom" },
       },
     },
+  });
+}
+
+async function drawIncomeChart() {
+  const allStates = window.getAllStates();
+
+  // フェーズ開始スナップショットを集める（drawScoreChart と同様）
+  const phaseMap = new Map();
+  allStates.forEach((s) => {
+    if (s.PhaseStart && !phaseMap.has(s.Phase)) {
+      phaseMap.set(s.Phase, s);
+    }
+  });
+  const phaseStates = Array.from(phaseMap.entries())
+    .sort((a, b) => a[0] - b[0])
+    .map(([_, state]) => state);
+
+  // 最終結果も末尾に追加
+  const finalState = allStates.find((s) => s.GameOver);
+  if (finalState) phaseStates.push(finalState);
+
+  // ラベル
+  const labels = phaseStates.map((s) =>
+    s.GameOver ? "Final" : s.Phase.toString()
+  );
+
+  // ■ 各プレイヤーごとのPhaseごとのIncome合計を計算
+  const playerCount = phaseStates[0].Players.length;
+  const datasets = Array.from({ length: playerCount }, (_, idx) => ({
+    label: `Player ${idx}`,
+    data: phaseStates.map((s) =>
+      s.Players[idx].Income.reduce((sum, c) => sum + c, 0)
+    ),
+    fill: false,
+  }));
+
+  // すでにチャートがあれば破棄
+  if (window.incomeChart) {
+    window.incomeChart.destroy();
+  }
+
+  // 描画
+  const ctx2 = document.getElementById("income-chart").getContext("2d");
+  window.incomeChart = new Chart(ctx2, {
+    type: "line",
+    data: {
+      labels,
+      datasets,
+    },
+    options: {
+      scales: {
+        y: {
+          beginAtZero: true,
+          title: { display: true, text: "Income per Phase" },
+        },
+        x: {
+          title: { display: true, text: "Phase" },
+        },
+      },
+      plugins: {
+        legend: { position: "bottom" },
+      },
+    },
+  });
+}
+
+function updateScoreLine(state) {
+  const container = document.getElementById("score-line-container");
+
+  /* ── ① スコア範囲を決定 ─────────────────────────────── */
+  const rawScores = state.Players.map((p) => p.Score);
+  const rawMin = Math.min(...rawScores);
+  const rawMax = Math.max(...rawScores);
+  const rawRange = rawMax - rawMin;
+
+  // 差が 40 未満なら、中央を保ったまま両端を広げて range=40 に
+  const mid = (rawMin + rawMax) / 2;
+  const displayMin = rawRange < 40 ? mid - 20 : rawMin;
+  const displayMax = rawRange < 40 ? mid + 20 : rawMax;
+  const range = displayMax - displayMin; // 40 以上を保証
+  const padding = 5; // 左右 5 %
+
+  /* ── ② スケール（値→%）関数 ───────────────────────── */
+  const toPct = (v) =>
+    padding + ((v - displayMin) / range) * (100 - 2 * padding);
+
+  /* ── ③ 一度だけライン要素を用意 ──────────────────── */
+  if (!container.querySelector("#score-line")) {
+    const line = document.createElement("div");
+    line.id = "score-line";
+    container.appendChild(line);
+  }
+
+  /* ── ④ 旧ラベル・目盛りをクリア ──────────────────── */
+  container
+    .querySelectorAll(".score-tick, .score-label")
+    .forEach((el) => el.remove());
+
+  /* ── ⑤ 両端のラベルと目盛り（実際の rawMin / rawMax） ─ */
+  [rawMin, rawMax].forEach((v) => {
+    const x = toPct(v) + "%";
+
+    const tick = document.createElement("div");
+    tick.className = "score-tick";
+    tick.style.left = x;
+    container.appendChild(tick);
+
+    const lbl = document.createElement("div");
+    lbl.className = "score-label";
+    lbl.style.left = x;
+    lbl.textContent = v;
+    container.appendChild(lbl);
+  });
+
+  /* ── ⑥ 同点グループ分け＋色・オフセット設定 ────────── */
+  const groups = {};
+  state.Players.forEach((p) => (groups[p.Score] ||= []).push(p));
+
+  const colors = [
+    "#E53E3E",
+    "#2B6CB0",
+    "#38A169",
+    "#D69E2E",
+    "#805AD5",
+    "#ED8936",
+    "#319795",
+    "#D53F8C",
+  ];
+  const offsetStep = 16; // px・すべて下方向へずらす
+
+  /* ── ⑦ マーカーを配置／更新（差分は CSS transition） ─ */
+  state.Players.forEach((p) => {
+    const idx = Number(p.Index);
+    const grp = groups[p.Score];
+    const order = grp.findIndex((x) => x.Index === p.Index); // 同点内順位
+    const leftPct = toPct(p.Score);
+    const topPx = 50 + order * offsetStep; // 50% 基準で下へ
+
+    let marker = container.querySelector(`#score-marker-${idx}`);
+    if (!marker) {
+      marker = document.createElement("div");
+      marker.id = `score-marker-${idx}`;
+      marker.className = "score-marker";
+      marker.textContent = idx;
+      container.appendChild(marker);
+    }
+    marker.style.left = leftPct + "%";
+    marker.style.top = topPx + "%";
+    marker.style.background = colors[idx % colors.length];
   });
 }
 

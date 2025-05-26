@@ -12,43 +12,55 @@
 <body>
     <!-- ▶ 初期設定パネル -->
     <div id="config">
-        <h2>プレイヤー設定</h2>
-        <label>
-            人数:
-            <select id="select-players">
-                <!-- 2～8 を列挙 -->
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-                <option value="5">5</option>
-                <option value="6">6</option>
-                <option value="7">7</option>
-                <option value="8">8</option>
-            </select>
+        <h2>ゲーム開始設定</h2>
+        人数:
+        <select id="select-players">
+            <!-- 2～8 を列挙 -->
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="7">7</option>
+            <option value="8">8</option>
+        </select>
         </label>
         <div id="player-types"><!-- JS で select が追加される --></div>
+        <div id="config-info">
+            <p>強さ: RandomAI &lt; 決打太郎 &lt; MontplusAI</p>
+            <p>人数は3〜4人、相手の強さは「MontplusAI Lv1以上」または「決打太郎 Lv3」がおすすめです</p>
+        </div>
         <button id="btn-start">ゲーム開始</button>
     </div>
 
     <div id="result-overlay" style="
-     position: absolute;
-     top: 0; left: 0; right: 0; bottom: 0;
-     background: rgba(0,0,0,0.8);
-     color: #fff;
-     display: none;
-     align-items: center;
-     justify-content: center;
-     z-index: 10;
-">
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.85);
+        color: #fff;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        z-index: 100;
+        overflow-y: auto;
+    ">
         <div id="final-results" style="
-       background: #1f2f1c;
-       padding: 24px;
-       border-radius: 8px;
-       max-height: 80vh;
-       overflow-y: auto;
-  ">
+            background: #1f2f1c;
+            padding: 24px;
+            border-radius: 8px;
+            width: 90vw;
+            max-width: 1200px;
+            height: 90vh;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            overflow-y: auto;
+        ">
             <h2 style="text-align:center; margin-bottom:16px;">最終結果</h2>
-            <table id="final-table" style="width:100%; border-collapse: collapse;">
+            <!-- テーブル（上） -->
+            <h3 style="text-align:center; margin-bottom:8px;">順位表</h3>
+            <table id="final-table" style="width:100%; border-collapse: collapse; flex: 1 1 auto; overflow-y: auto;">
                 <thead>
                     <tr>
                         <th>順位</th>
@@ -61,9 +73,15 @@
                 </thead>
                 <tbody></tbody>
             </table>
-            <h3 style="margin-top:24px;">順位推移</h3>
+            <!-- グラフ（下） -->
+            <h3 style="margin-top:24px; text-align:center;">差分推移</h3>
             <canvas id="rank-chart" width="600" height="300"
-                style="max-width:100%; height:auto; background:#fff; border-radius:4px;"></canvas>
+                style="width:100%; flex: 1 1 auto; background:#fff; border-radius:4px;"></canvas>
+
+            <!-- 追加：合計Income推移 -->
+            <h3 style="margin-top:24px; text-align:center;">収入推移</h3>
+            <canvas id="income-chart" width="600" height="300"
+                style="width:100%; flex: 1 1 auto; background:#fff; border-radius:4px;"></canvas>
             <div style="text-align:center; margin-top:16px;">
                 <button id="btn-close-results">閉じる</button>
             </div>
@@ -72,6 +90,10 @@
 
     <!-- ▶ 可視化パネル（初期は非表示） -->
     <div id="visualizer" style="display:none;">
+        <div id="status-banner">
+            <div class="status-item">Phase: <span id="banner-phase">—</span></div>
+            <div class="status-item">Round: <span id="banner-round">—</span></div>
+        </div>
         <div id="layout">
             <!-- 左カラム：現在の場 -->
             <section id="field-panel" class="panel">
@@ -82,7 +104,9 @@
                 <div>フェーズ: <span id="phase">—</span></div>
                 <div>ラウンド: <span id="round">—</span></div>
                 <div>最高入札者: <span id="highest-player">—</span></div>
-                <div>最高入札額: <span id="highest-bid">—</span></div>
+                <div>最高入札額:
+                    <span id="highest-bid" class="bid-values">—</span>
+                </div>
             </section>
 
             <!-- 中央カラム：プレイヤー状況 -->
@@ -91,20 +115,29 @@
                 <table id="player-table">
                     <thead>
                         <tr>
-                        <tr>
-                            <th>#</th>
-                            <th>名前</th>
-                            <th>順位</th>
-                            <th>得点</th>
-                            <th>所持</th>
-                            <th>収入</th>
-                            <th>暫定</th>
-                            <th>ステータス</th>
+                            <th rowspan="2">#</th>
+                            <th rowspan="2">名前</th>
+                            <th rowspan="2">順位</th>
+                            <th rowspan="2">得点</th>
+                            <th colspan="3">持ちコイン</th>
+                            <th colspan="3">収入コイン</th>
+                            <th rowspan="2">暫定</th>
+                            <th rowspan="2">ステータス</th>
                         </tr>
+                        <tr>
+                            <th>R</th>
+                            <th>G</th>
+                            <th>B</th>
+                            <th>R</th>
+                            <th>G</th>
+                            <th>B</th>
                         </tr>
                     </thead>
                     <tbody id="player-body"></tbody>
                 </table>
+                <div id="score-line-container">
+                    <div id="score-line"></div>
+                </div>
             </section>
 
             <!-- 右カラム：操作パレット -->
@@ -114,6 +147,8 @@
                     <button id="btn-next">次へ (N)</button>
                     <button id="btn-skip-round">ラウンド終了までスキップ (R)</button>
                     <button id="btn-skip-phase">フェーズ終了までスキップ (P)</button>
+                    <button id="btn-show-results" style="display:none;">結果を見る</button>
+                    <button id="btn-new-game">新しいゲームを始める</button>
                 </div>
                 <div id="human-controls">
                     <h3>あなたの入札</h3>
@@ -126,6 +161,10 @@
             </section>
         </div>
     </div>
+    <a id="rule-link" href="https://github.com/MONTplusa/auction-game/blob/main/README.md" target="_blank"
+        rel="noopener noreferrer">
+        ゲームルールについて（GitHub に移動します）
+    </a>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="app.js"></script>
