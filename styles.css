@@ -125,22 +125,9 @@ html, body {
   padding: 4px 8px;      /* 矢印の分を確保しつつタップしやすく */
   text-align: right;
   box-sizing: border-box;
-  appearance: textfield; /* Firefox でもスピンを非表示に */
 }
 
-/* Chrome/Safari/Edge のスピンボタンを小さく */
-#human-controls input[type="number"]::-webkit-inner-spin-button,
-#human-controls input[type="number"]::-webkit-outer-spin-button {
-  -webkit-appearance: inner-spin-button;
-  width: auto;
-  transform: scale(1);   /* 矢印をデフォルトサイズに */
-  margin-right: 4px;     /* 右側に余裕を確保 */
-}
 
-/* Firefox のスピンボタンを小さく */
-#human-controls input[type="number"] {
-  -moz-appearance: textfield; /* デフォルトスピンを消しておく */
-}
 
 #human-controls input[type="number"]::-moz-number-spin-box {
   width: 1.4em;
@@ -167,4 +154,266 @@ html, body {
   color: #ffb300;      /* ゴールド系 */
   display: inline-block;
   transform: translateY(2px);
+}
+
+/* ── フェーズ／ラウンドを大々的に表示するバナー ───────────────── */
+#status-banner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  /* ダークグリーンのグラデーションに変更 */
+  background: linear-gradient(90deg, #164d2e, #1f2f1c);
+  padding: 1rem 0;
+  border-bottom: 4px solid #0a2e13;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  margin-bottom: 8px;
+}
+.status-item {
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
+  color: #f0f0e0;            /* 他テキスト色と合わせて明るめに */
+  font-weight: 700;
+  margin: 0 2rem;
+  position: relative;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.6);
+}
+/* 下線エフェクトを抑えめに */
+.status-item::after {
+  content: "";
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  width: 0;
+  height: 3px;
+  background: #0a2e13;
+  transition: width 0.3s ease, left 0.3s ease;
+}
+.status-item:hover::after {
+  width: 100%;
+  left: 0;
+}
+
+/* ── コインバッジ表示（リッチ仕様）──────────────────────── */
+.coin {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.6em;
+  height: 1.6em;
+  padding: 0 0.5em;
+  border-radius: 0.8em;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  position: relative;
+  overflow: hidden;            /* ← 追加：はみ出しを隠す */
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.3),
+    inset 0 1px rgba(255, 255, 255, 0.2);
+  margin: 0 0.2em;
+}
+
+/* 光沢ハイライトの疑似要素 */
+.coin::before {
+  content: "";
+  position: absolute;
+  top: -10%;                   /* 少しだけ上にはみ出す程度に */
+  left: 0;
+  width: 100%;
+  height: 50%;
+  border-top-left-radius: 0.8em;
+  border-top-right-radius: 0.8em;
+  background: rgba(255, 255, 255, 0.25);
+  transform: skewY(-10deg);
+  pointer-events: none;
+}
+
+/* 赤コイン：上部が明るく、下部を濃くして光沢感 */
+.coin-red {
+  background: linear-gradient( to bottom, #f56565, #c53030 );
+  border: 1px solid #9b2c2c;
+}
+/* 緑コイン */
+.coin-green {
+  background: linear-gradient( to bottom, #68d391, #2f855a );
+  border: 1px solid #276749;
+}
+/* 青コイン */
+.coin-blue {
+  background: linear-gradient( to bottom, #63b3ed, #2b6cb0 );
+  border: 1px solid #2c5282;
+}
+
+/* 1) バーを入れる列は幅制限を外す */
+#player-table td:nth-child(5),
+#player-table td:nth-child(6) {
+  max-width: none;
+  width: auto;
+}
+
+/* 2) coin-bar-container がセル幅いっぱいを使う */
+.coin-bar-container {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  width: 100%;
+}
+
+/* 3) flex の自動拡大を切って、width で制御させる */
+.coin-bar {
+  display: block;     /* inline-block でも可 */
+  flex: none;         /* width 指定を優先 */
+  height: 1em;
+  border-radius: 0.2em;
+  overflow: hidden;
+  min-width: 1ch;     /* 値が 0 でも最小の目印を表示 */
+}
+
+/* 既存の色指定はそのまま */
+.coin-bar.red   { background: linear-gradient(to right, #f56565, #c53030); }
+.coin-bar.green { background: linear-gradient(to right, #68d391, #2f855a); }
+.coin-bar.blue  { background: linear-gradient(to right, #63b3ed, #2b6cb0); }
+
+.coin-bar span {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ── バー＋数字表示ラッパー ───────────────────────── */
+.coin-bar-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2em;
+}
+.coin-bar-label {
+  font-size: 0.75rem;
+  color: #f0f0e0;
+  font-weight: 600;
+}
+
+/* ── 画面右下に常駐するルールリンク ───────────────── */
+#rule-link {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  background: rgba(31, 47, 28, 0.9); /* Visualizer のダークグリーンと合わせ */
+  color: #f0f0e0;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  text-decoration: none;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+  z-index: 999;
+  transition: background 0.2s ease;
+}
+#rule-link:hover {
+  background: rgba(31, 47, 28, 1);
+}
+
+/* ── 得点分布を示す数直線 ───────────────────────────── */
+#score-line-container {
+  position: relative;
+  height: 40px;
+  margin-top: 1rem;
+}
+#score-line-container #score-line {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #e0e0d0;
+}
+.score-tick {
+  position: absolute;
+  top: 50%;
+  width: 1px;
+  height: 8px;
+  background: #e0e0d0;
+}
+/* ── 数直線ラベルを線の上に ───────────────────────────── */
+.score-label {
+  position: absolute;
+  top: calc(50% - 12px);    /* 線（50%）の上12pxに配置 */
+  transform: translateX(-50%);
+  font-size: 0.75rem;
+  color: #e0e0d0;
+}
+
+/* ── マーカーにアニメーションと制約を追加 ───────────────── */
+.score-marker {
+  position: absolute;
+  transform: translateX(-50%); /* 横方向だけ中央揃え */
+  font-size: 0.85rem;
+  color: #fff;
+  border-radius: 50%;
+  width: 1.2em;
+  height: 1.2em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 移動時に滑らかにアニメーション */
+  transition: left 1.5s ease, top 1.5s ease;
+  overflow: hidden;
+  z-index: 2;
+}
+
+/* ── おしゃれボタン共通スタイル ───────────────────────── */
+button {
+  background: linear-gradient(135deg, #2e8b57 0%, #1f5f3a 100%);
+  border: none;
+  border-radius: 6px;
+  color: #f0f0e0;
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.2s ease, background 0.3s ease;
+}
+
+/* ホバー時：少し明るく・浮き上がり感 */
+button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #3aa673 0%, #247249 100%);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+  transform: translateY(-2px);
+}
+
+/* アクティブ時：押し込みエフェクト */
+button:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+/* 無効時：淡色化 */
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* 小さいボタンやセカンダリ用に .btn-sm を用意 */
+.btn-sm {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.85rem;
+  border-radius: 4px;
+}
+
+/* ── 初期設定画面の補足説明 ───────────────── */
+#config-info {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  color: #d0d0c0;
+  text-align: center;
+  line-height: 1.4;
+}
+#config-info p:not(:last-child) {
+  margin-bottom: 0.5rem;
 }
