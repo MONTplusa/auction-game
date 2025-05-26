@@ -7,7 +7,7 @@ func NewGameState(N int) *GameState {
 	incomes := make([][3]int, N)
 	moneys := make([][3]int, N)
 	for i := 0; i < N; i++ {
-		moneys[i] = [3]int{10, 10, 10}
+		moneys[i] = [3]int{10 + N - 1 - i, 10, 10}
 	}
 	return &GameState{
 		Phase:   1,
