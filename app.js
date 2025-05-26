@@ -380,8 +380,39 @@ function bindStart() {
     window.initGame(n, JSON.stringify(types));
     document.getElementById("config").style.display = "none";
     document.getElementById("visualizer").style.display = "block";
+
+    // ── ここで以前の数直線をクリア ──────────
+    const scoreLineContainer = document.getElementById("score-line-container");
+    if (scoreLineContainer) {
+      scoreLineContainer.innerHTML = '<div id="score-line"></div>';
+    }
     const state = window.getCurrentState();
     updateUI(state);
+  });
+}
+
+function bindWheelControls() {
+  // Human controls 内の number input 全てを対象に
+  const inputs = document.querySelectorAll(
+    '#human-controls input[type="number"]'
+  );
+  inputs.forEach((input) => {
+    input.addEventListener(
+      "wheel",
+      (e) => {
+        e.preventDefault(); // ページスクロールを抑制
+        const step = Number(input.step) || 1;
+        const min = Number(input.min) || 0;
+        let val = Number(input.value) || 0;
+        // deltaY < 0: 上スクロール → 値を増やす
+        // deltaY > 0: 下スクロール → 値を減らす
+        if (e.deltaY < 0) val += step;
+        else if (e.deltaY > 0) val -= step;
+        if (val < min) val = min;
+        input.value = val;
+      },
+      { passive: false }
+    );
   });
 }
 
@@ -622,4 +653,5 @@ function updateScoreLine(state) {
   bindStart();
   bindControls();
   bindHumanControls();
+  bindWheelControls();
 })();
